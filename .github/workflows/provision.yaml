@@ -1,0 +1,49 @@
+name: Mudit DBT Terraform
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+    - main
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+
+    - name: Install dependencies
+      run: make setup
+
+    # we install Terraform beforehand, otherwise each test requires downloading it
+    - uses: hashicorp/setup-terraform@v3
+
+    - name: Dry Run
+      shell: bash
+      run: |
+        chmod +x bin/terraform_plan.sh
+        bin/terraform_plan.sh
+
+      env:
+          DBT_CLOUD_ACCOUNT_ID: ${{ secrets.DBT_CLOUD_ACCOUNT_ID }}
+          DBT_CLOUD_TOKEN: ${{ secrets.DBT_CLOUD_TOKEN }}
+          DBT_CLOUD_HOST_URL: ${{ secrets.DBT_CLOUD_HOST_URL }}
+      
+    - name: Provision
+      shell: bash
+      run: bin/terraform_apply.sh #install/toolkit provision apply --approve | tee plan.log
+      if: github.event_name == 'push'
+
+  #  - name: Create comment
+  #    uses: peter-evans/create-or-update-comment@v2
+  #    if: github.event_name == 'pull_request'
+  #    with:
+  #      issue-number: ${{ github.event.pull_request.number }}
+  #      body-file: 'plan.log'
+  ##TEST3
